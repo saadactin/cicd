@@ -2,7 +2,7 @@ pipeline {
     agent any
 
     environment {
-        DOCKER_IMAGE = "vite-hello"
+        IMAGE_NAME = "vite-hello"
         CONTAINER_NAME = "vite-hello-container"
     }
 
@@ -13,38 +13,19 @@ pipeline {
             }
         }
 
-        stage('Install Node (if needed)') {
-            steps {
-                sh '''
-                # Install Node.js 20 if not installed
-                if ! command -v node >/dev/null 2>&1; then
-                  curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
-                  sudo apt-get install -y nodejs
-                fi
-                node -v
-                npm -v
-                '''
-            }
-        }
-
         stage('Build Docker Image') {
             steps {
-                sh '''
-                echo "Building Docker image..."
-                docker build -t $DOCKER_IMAGE .
-                '''
+                sh 'docker build -t ${IMAGE_NAME} .'
             }
         }
 
         stage('Run Docker Container') {
             steps {
+                // Stop & remove if already running
                 sh '''
-                echo "Stopping old container (if exists)..."
-                docker stop $CONTAINER_NAME || true
-                docker rm $CONTAINER_NAME || true
-
-                echo "Running new container..."
-                docker run -d --name $CONTAINER_NAME -p 5173:5173 $DOCKER_IMAGE
+                  docker stop ${CONTAINER_NAME} || true
+                  docker rm ${CONTAINER_NAME} || true
+                  docker run -d -p 5173:5173 --name ${CONTAINER_NAME} ${IMAGE_NAME}
                 '''
             }
         }
@@ -52,7 +33,7 @@ pipeline {
 
     post {
         success {
-            echo "🚀 App is running at http://<your-public-ip>:5173"
+            echo "✅ App deployed! Visit http://<your-server-public-ip>:5173"
         }
         failure {
             echo "❌ Build failed."
